@@ -101,8 +101,16 @@ def bauchgefuehl(md):
 # Übungsaufgaben mit Prüfen-Knopf und Lösungsweg
 # ---------------------------------------------------------------------
 def neue_aufgabe(key, gen):
-    st.session_state[key] = gen()
-    st.session_state.pop(key + "_ans", None)
+    # Jede Aufgabe bekommt eine neue Nummer -> frisches Eingabefeld.
+    # (Nur den Key zu löschen reicht nicht: der Browser behält sonst den alten
+    # Text, und der wird dann gegen die neue Aufgabe geprüft.)
+    alt = st.session_state.get(key)
+    nr = alt.get("nr", 0) + 1 if alt else 0
+    if alt:
+        st.session_state.pop(f"{key}_ans_{alt.get('nr', 0)}", None)
+    task = gen()
+    task["nr"] = nr
+    st.session_state[key] = task
     st.session_state[key + "_status"] = None
 
 
@@ -110,6 +118,7 @@ def aufgabe(key, gen, titel="Übungsaufgabe"):
     if key not in st.session_state:
         neue_aufgabe(key, gen)
     task = st.session_state[key]
+    ans_key = f"{key}_ans_{task.get('nr', 0)}"
     with st.container(border=True):
         st.markdown(f"#### {titel}")
         st.markdown(task["text"])
@@ -117,12 +126,12 @@ def aufgabe(key, gen, titel="Übungsaufgabe"):
             zeige(task["fig"])
         st.text_input(
             f"Deine Antwort (in {task['unit']})",
-            key=key + "_ans",
+            key=ans_key,
             placeholder="z.B. 12,5",
         )
         c1, c2, _ = st.columns([1, 1, 2])
         if c1.button("Prüfen", key=key + "_chk", width="stretch"):
-            wert = lies_zahl(st.session_state.get(key + "_ans"))
+            wert = lies_zahl(st.session_state.get(ans_key))
             if wert is None:
                 st.session_state[key + "_status"] = "leer"
             else:
